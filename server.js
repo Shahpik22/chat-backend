@@ -78,6 +78,16 @@ app.post("/messages", async (req, res) => {
   res.json(msg);
 });
 
+app.delete("/messages", async (req, res) => {
+  try {
+    await Message.deleteMany({});
+    res.json({ success: true, message: "All chat cleared" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on", PORT));
 
