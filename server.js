@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const Message = require("./models/Message");
-
+const UserStatus = require("./models/UserStatus");
 const app = express();
 
 app.use(cors());
@@ -96,4 +96,41 @@ app.listen(PORT, () => console.log("Server running on", PORT));
 ========================= */
 app.get('/', (req, res) => {
   res.send("Chat server running");
+});
+
+app.post("/heartbeat", async (req, res) => {
+  try {
+
+    const { name } = req.body;
+
+    await UserStatus.findOneAndUpdate(
+      { name },
+      { lastActive: new Date() },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/online-users", async (req, res) => {
+  try {
+
+    const now = new Date();
+    const activeLimit = 10 * 1000; // 10 seconds
+
+    const users = await UserStatus.find();
+
+    const onlineUsers = users
+      .filter(u => (now - u.lastActive) < activeLimit)
+      .map(u => u.name);
+
+    res.json(onlineUsers);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
