@@ -59,8 +59,8 @@ app.get("/messages", async (req, res) => {
       .find(query)
       .sort({ createdAt: 1 })
       .limit(100);
-    // res.json(messages);
-    res.json(messages.reverse());
+    res.json(messages);
+    // res.json(messages.reverse());
   } catch (err) {
     console.log(err);
     res.status(500).json({
