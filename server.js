@@ -23,20 +23,50 @@ mongoose.connect(process.env.MONGODB_URI)
 //   res.json(messages);
 // });
 
+// app.get("/messages", async (req, res) => {
+//   const after = req.query.after;
+//   let query = {};
+//   if (after) {
+//     query.createdAt = {
+//       $gt: new Date(after)
+//     };
+//   }
+
+//   const messages = await Message
+//     .find(query)
+//     .sort({ createdAt: 1 });
+
+//   res.json(messages);
+// });
+
+
 app.get("/messages", async (req, res) => {
-  const after = req.query.after;
-  let query = {};
-  if (after) {
-    query.createdAt = {
-      $gt: new Date(after)
-    };
+
+  try {
+    const after = req.query.after;
+    let query = {};
+    // only filter if valid
+    if (
+      after &&
+      after !== 'undefined' &&
+      !isNaN(Date.parse(after))
+    ) {
+      query.createdAt = {
+        $gt: new Date(after)
+      };
+    }
+    const messages = await Message
+      .find(query)
+      .sort({ createdAt: 1 })
+      .limit(100);
+    // res.json(messages);
+    res.json(messages.reverse());
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: err.message
+    });
   }
-
-  const messages = await Message
-    .find(query)
-    .sort({ createdAt: 1 });
-
-  res.json(messages);
 });
 
 /**
