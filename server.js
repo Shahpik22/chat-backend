@@ -134,3 +134,15 @@ app.get("/online-users", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get("/messages/:roomId", async (req, res) => {
+
+  const { roomId } = req.params;
+
+  const messages = await Message
+    .find({ roomId })
+    .sort({ createdAt: 1 })
+    .limit(100);
+
+  res.json(messages);
+});
