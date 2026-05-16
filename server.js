@@ -5,116 +5,149 @@ require("dotenv").config();
 
 const Message = require("./models/Message");
 const UserStatus = require("./models/UserStatus");
+
 const app = express();
 
+/* =========================
+   MIDDLEWARE
+========================= */
+
 app.use(cors());
+
 app.use(express.json());
 
-// MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+app.use(express.urlencoded({
+  extended: true
+}));
 
-/**
- * GET messages
- */
-// app.get("/messages", async (req, res) => {
-//   const messages = await Message.find().sort({ createdAt: 1 });
-//   res.json(messages);
-// });
+/* =========================
+   ROOT
+========================= */
 
-// app.get("/messages", async (req, res) => {
-//   const after = req.query.after;
-//   let query = {};
-//   if (after) {
-//     query.createdAt = {
-//       $gt: new Date(after)
-//     };
-//   }
+app.get("/", (req, res) => {
+  res.send("Chat server running");
+});
 
-//   const messages = await Message
-//     .find(query)
-//     .sort({ createdAt: 1 });
-
-//   res.json(messages);
-// });
-
+/* =========================
+   GET ALL MESSAGES
+========================= */
 
 app.get("/messages", async (req, res) => {
 
   try {
+
     const after = req.query.after;
+
     let query = {};
-    // only filter if valid
+
+    // filter messages after timestamp
     if (
       after &&
-      after !== 'undefined' &&
+      after !== "undefined" &&
       !isNaN(Date.parse(after))
     ) {
+
       query.createdAt = {
         $gt: new Date(after)
       };
     }
+
     const messages = await Message
       .find(query)
       .sort({ createdAt: 1 })
       .limit(100);
+
     res.json(messages);
-    // res.json(messages.reverse());
+
   } catch (err) {
+
     console.log(err);
+
     res.status(500).json({
       error: err.message
     });
   }
 });
 
-/**
- * POST message
- */
-app.post("/messages", async (req, res) => {
-  const msg = new Message(req.body);
-  await msg.save();
-  res.json(msg);
-});
+/* =========================
+   GET ROOM MESSAGES
+========================= */
 
-app.delete("/messages", async (req, res) => {
+app.get("/messages/:roomId", async (req, res) => {
+
   try {
-    await Message.deleteMany({});
-    res.json({ success: true, message: "All chat cleared" });
+
+    const roomId = req.params.roomId;
+
+    const messages = await Message
+      .find({ roomId: roomId })
+      .sort({ createdAt: 1 })
+      .limit(100);
+
+    res.json(messages);
+
   } catch (err) {
+
     console.log(err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on", PORT));
-
 /* =========================
-   REST ENDPOINT (optional)
+   SAVE MESSAGE
 ========================= */
-app.get('/', (req, res) => {
-  res.send("Chat server running");
+
+app.post("/messages", async (req, res) => {
+
+  try {
+
+    const msg = new Message(req.body);
+
+    await msg.save();
+
+    res.json(msg);
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 });
 
-// app.post("/heartbeat", async (req, res) => {
-//   try {
+/* =========================
+   DELETE ALL MESSAGES
+========================= */
 
-//     const { name } = req.body;
+app.delete("/messages", async (req, res) => {
 
-//     await UserStatus.findOneAndUpdate(
-//       { name },
-//       { lastActive: new Date() },
-//       { upsert: true, new: true }
-//     );
+  try {
 
-//     res.json({ success: true });
+    await Message.deleteMany({});
 
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
+    res.json({
+      success: true,
+      message: "All chat cleared"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+/* =========================
+   HEARTBEAT
+========================= */
 
 app.post("/heartbeat/:name", async (req, res) => {
 
@@ -148,6 +181,9 @@ app.post("/heartbeat/:name", async (req, res) => {
   }
 });
 
+/* =========================
+   ONLINE USER STATUS
+========================= */
 
 app.get("/online-users/:name", async (req, res) => {
 
@@ -167,6 +203,7 @@ app.get("/online-users/:name", async (req, res) => {
       });
     }
 
+    // online if active within 10 sec
     const activeLimit = 10 * 1000;
 
     const isOnline =
@@ -187,14 +224,30 @@ app.get("/online-users/:name", async (req, res) => {
   }
 });
 
-app.get("/messages/:roomId", async (req, res) => {
+/* =========================
+   START SERVER
+========================= */
 
-  const { roomId } = req.params;
+mongoose.set("bufferCommands", false);
 
-  const messages = await Message
-    .find({ roomId })
-    .sort({ createdAt: 1 })
-    .limit(100);
+async function startServer() {
 
-  res.json(messages);
-});
+  try {
+
+    await mongoose.connect(process.env.MONGODB_URI);
+
+    console.log("MongoDB connected");
+
+    const PORT = process.env.PORT || 3000;
+
+    app.listen(PORT, () => {
+      console.log("Server running on", PORT);
+    });
+
+  } catch (err) {
+
+    console.log("MongoDB ERROR:", err);
+  }
+}
+
+startServer();
