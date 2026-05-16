@@ -116,51 +116,74 @@ app.get('/', (req, res) => {
 //   }
 // });
 
-app.post("/heartbeat/:user", async (req, res) => {
+app.post("/heartbeat/:name", async (req, res) => {
 
-  const { user } = req.params;
-
-  await UserStatus.findOneAndUpdate(
-    { user },
-    {
-      user,
-      lastActive: new Date()
-    },
-    {
-      upsert: true,
-      returnDocument: 'after'
-    }
-  );
-
-  res.json({ success: true });
-});
-
-app.get("/online-users/:user", async (req, res) => {
   try {
 
-    const { user } = req.params;
+    const name = req.params.name;
 
-    const userStatus = await UserStatus.findOne({ user });
+    await UserStatus.findOneAndUpdate(
+      { name: name },
+      {
+        name: name,
+        lastActive: new Date()
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+
+app.get("/online-users/:name", async (req, res) => {
+
+  try {
+
+    const name = req.params.name;
+
+    const userStatus = await UserStatus.findOne({
+      name: name
+    });
 
     if (!userStatus) {
+
       return res.json({
-         user,
+        name: name,
         status: false
       });
     }
 
-    const activeLimit = 10 * 1000; // 10 seconds
+    const activeLimit = 10 * 1000;
 
     const isOnline =
       (Date.now() - new Date(userStatus.lastActive).getTime()) < activeLimit;
 
     res.json({
-       user,
+      name: name,
       status: isOnline
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
