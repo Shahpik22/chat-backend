@@ -82,7 +82,6 @@ app.get("/messages/:roomId", async (req, res) => {
     const messages = await Message
       .find({ roomId: roomId })
       .sort({ createdAt: 1 })
-      .limit(100);
 
     res.json(messages);
 
