@@ -224,6 +224,28 @@ app.get("/online-users/:name", async (req, res) => {
 });
 
 /* =========================
+   READ USER CHAT
+========================= */
+
+app.put("/messages/read/:roomId/:name", async (req, res) => {
+
+  await Message.updateMany(
+    {
+      roomId: req.params.roomId,
+      name: { $ne: req.params.name },
+      read: false
+    },
+    {
+      $set: { read: true }
+    }
+  );
+
+  res.json({
+    success: true
+  });
+});
+
+/* =========================
    START SERVER
 ========================= */
 
